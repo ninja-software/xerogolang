@@ -63,7 +63,7 @@ func unmarshalTaxRate(taxRateResponseBytes []byte) (*TaxRates, error) {
 }
 
 //Create will create taxRates given an TaxRates struct
-func (t *TaxRates) Create(provider *xerogolang.Provider, session goth.Session) (*TaxRates, error) {
+func (t *TaxRates) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*TaxRates, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -74,7 +74,7 @@ func (t *TaxRates) Create(provider *xerogolang.Provider, session goth.Session) (
 		return nil, err
 	}
 
-	taxRateResponseBytes, err := provider.Create(session, "TaxRates", additionalHeaders, body)
+	taxRateResponseBytes, err := provider.Create(session, "TaxRates", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

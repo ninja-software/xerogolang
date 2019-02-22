@@ -115,7 +115,7 @@ func unmarshalCreditNote(creditNoteResponseBytes []byte) (*CreditNotes, error) {
 }
 
 //Create will create creditNotes given an CreditNotes struct
-func (c *CreditNotes) Create(provider *xerogolang.Provider, session goth.Session) (*CreditNotes, error) {
+func (c *CreditNotes) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*CreditNotes, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -126,7 +126,7 @@ func (c *CreditNotes) Create(provider *xerogolang.Provider, session goth.Session
 		return nil, err
 	}
 
-	creditNoteResponseBytes, err := provider.Create(session, "CreditNotes", additionalHeaders, body)
+	creditNoteResponseBytes, err := provider.Create(session, "CreditNotes", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

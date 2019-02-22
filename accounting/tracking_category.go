@@ -40,7 +40,7 @@ func unmarshalTrackingCategory(trackingCategoryResponseBytes []byte) (*TrackingC
 }
 
 //Create will create trackingCategories given an TrackingCategories struct
-func (t *TrackingCategories) Create(provider *xerogolang.Provider, session goth.Session) (*TrackingCategories, error) {
+func (t *TrackingCategories) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*TrackingCategories, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -51,7 +51,7 @@ func (t *TrackingCategories) Create(provider *xerogolang.Provider, session goth.
 		return nil, err
 	}
 
-	trackingCategoryResponseBytes, err := provider.Create(session, "TrackingCategories", additionalHeaders, body)
+	trackingCategoryResponseBytes, err := provider.Create(session, "TrackingCategories", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

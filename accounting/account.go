@@ -103,7 +103,7 @@ func unmarshalAccount(accountResponseBytes []byte) (*Accounts, error) {
 }
 
 //Create will create accounts given an Accounts struct
-func (a *Accounts) Create(provider *xerogolang.Provider, session goth.Session) (*Accounts, error) {
+func (a *Accounts) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*Accounts, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -114,7 +114,7 @@ func (a *Accounts) Create(provider *xerogolang.Provider, session goth.Session) (
 		return nil, err
 	}
 
-	accountResponseBytes, err := provider.Create(session, "Accounts", additionalHeaders, body)
+	accountResponseBytes, err := provider.Create(session, "Accounts", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

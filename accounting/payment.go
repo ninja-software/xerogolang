@@ -89,7 +89,7 @@ func unmarshalPayment(paymentResponseBytes []byte) (*Payments, error) {
 }
 
 //Create will create payments given an Payments struct
-func (p *Payments) Create(provider *xerogolang.Provider, session goth.Session) (*Payments, error) {
+func (p *Payments) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*Payments, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -100,7 +100,7 @@ func (p *Payments) Create(provider *xerogolang.Provider, session goth.Session) (
 		return nil, err
 	}
 
-	paymentResponseBytes, err := provider.Create(session, "Payments", additionalHeaders, body)
+	paymentResponseBytes, err := provider.Create(session, "Payments", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

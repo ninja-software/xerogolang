@@ -133,6 +133,7 @@ func Test_Create(t *testing.T) {
 			"Accept":       "application/json",
 			"Content-Type": "application/xml",
 		}
+		querystringParameters := map[string]string{}
 
 		test := Test{
 			Name:   "Store",
@@ -150,7 +151,7 @@ func Test_Create(t *testing.T) {
 			a.Error(err, nil)
 		}
 
-		response, err := provider.Create(&session, "TrackingCategories", additionalHeaders, body)
+		response, err := provider.Create(&session, "TrackingCategories", additionalHeaders, body, querystringParameters)
 		if err != nil {
 			a.Error(err, nil)
 		}

@@ -30,7 +30,7 @@ type Options struct {
 
 //Add will add tracking options to the TrackingCategory Specified on the first option
 //All options should belong to the same Tracking Category
-func (o *Options) Add(provider *xerogolang.Provider, session goth.Session) (*TrackingCategories, error) {
+func (o *Options) Add(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*TrackingCategories, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -41,7 +41,7 @@ func (o *Options) Add(provider *xerogolang.Provider, session goth.Session) (*Tra
 		return nil, err
 	}
 
-	trackingCategoryResponseBytes, err := provider.Create(session, "TrackingCategories/"+o.Options[0].TrackingCategoryID+"/Options", additionalHeaders, body)
+	trackingCategoryResponseBytes, err := provider.Create(session, "TrackingCategories/"+o.Options[0].TrackingCategoryID+"/Options", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

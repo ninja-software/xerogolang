@@ -109,7 +109,7 @@ func unmarshalBankTransaction(bankTransactionResponseBytes []byte) (*BankTransac
 }
 
 //Create will create BankTransactions given an BankTransactions struct
-func (b *BankTransactions) Create(provider *xerogolang.Provider, session goth.Session) (*BankTransactions, error) {
+func (b *BankTransactions) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*BankTransactions, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -120,7 +120,7 @@ func (b *BankTransactions) Create(provider *xerogolang.Provider, session goth.Se
 		return nil, err
 	}
 
-	bankTransactionResponseBytes, err := provider.Create(session, "BankTransactions", additionalHeaders, body)
+	bankTransactionResponseBytes, err := provider.Create(session, "BankTransactions", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

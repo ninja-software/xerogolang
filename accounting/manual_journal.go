@@ -83,7 +83,7 @@ func unmarshalManualJournal(manualJournalResponseBytes []byte) (*ManualJournals,
 }
 
 //Create will create manualJournals given an ManualJournals struct
-func (m *ManualJournals) Create(provider *xerogolang.Provider, session goth.Session) (*ManualJournals, error) {
+func (m *ManualJournals) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*ManualJournals, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -94,7 +94,7 @@ func (m *ManualJournals) Create(provider *xerogolang.Provider, session goth.Sess
 		return nil, err
 	}
 
-	manualJournalResponseBytes, err := provider.Create(session, "ManualJournals", additionalHeaders, body)
+	manualJournalResponseBytes, err := provider.Create(session, "ManualJournals", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

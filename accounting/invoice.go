@@ -145,7 +145,7 @@ func unmarshalInvoice(invoiceResponseBytes []byte) (*Invoices, error) {
 }
 
 //Create will create invoices given an Invoices struct
-func (i *Invoices) Create(provider *xerogolang.Provider, session goth.Session) (*Invoices, error) {
+func (i *Invoices) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*Invoices, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -156,7 +156,7 @@ func (i *Invoices) Create(provider *xerogolang.Provider, session goth.Session) (
 		return nil, err
 	}
 
-	invoiceResponseBytes, err := provider.Create(session, "Invoices", additionalHeaders, body)
+	invoiceResponseBytes, err := provider.Create(session, "Invoices", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

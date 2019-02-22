@@ -84,7 +84,7 @@ func unmarshalExpenseClaim(expenseClaimResponseBytes []byte) (*ExpenseClaims, er
 }
 
 //Create will create expenseClaims given an ExpenseClaims struct
-func (e *ExpenseClaims) Create(provider *xerogolang.Provider, session goth.Session) (*ExpenseClaims, error) {
+func (e *ExpenseClaims) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*ExpenseClaims, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -95,7 +95,7 @@ func (e *ExpenseClaims) Create(provider *xerogolang.Provider, session goth.Sessi
 		return nil, err
 	}
 
-	expenseClaimResponseBytes, err := provider.Create(session, "ExpenseClaims", additionalHeaders, body)
+	expenseClaimResponseBytes, err := provider.Create(session, "ExpenseClaims", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

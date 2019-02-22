@@ -140,7 +140,7 @@ func FindPrepayment(provider *xerogolang.Provider, session goth.Session, prepaym
 
 //Allocate allocates a prepayment - to create a prepayment
 //use the bankTransactions endpoint.
-func (p *Prepayments) Allocate(provider *xerogolang.Provider, session goth.Session, allocations Allocations) (*Prepayments, error) {
+func (p *Prepayments) Allocate(provider *xerogolang.Provider, session goth.Session, allocations Allocations, querystringParameters map[string]string) (*Prepayments, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -151,7 +151,7 @@ func (p *Prepayments) Allocate(provider *xerogolang.Provider, session goth.Sessi
 		return nil, err
 	}
 
-	prepaymentResponseBytes, err := provider.Create(session, "Prepayments/"+p.Prepayments[0].PrepaymentID+"/Allocations", additionalHeaders, body)
+	prepaymentResponseBytes, err := provider.Create(session, "Prepayments/"+p.Prepayments[0].PrepaymentID+"/Allocations", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

@@ -80,7 +80,7 @@ func unmarshalLinkedTransaction(linkedTransactionResponseBytes []byte) (*LinkedT
 }
 
 //Create will create LinkedTransactions given an LinkedTransactions struct
-func (l *LinkedTransactions) Create(provider *xerogolang.Provider, session goth.Session) (*LinkedTransactions, error) {
+func (l *LinkedTransactions) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*LinkedTransactions, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -91,7 +91,7 @@ func (l *LinkedTransactions) Create(provider *xerogolang.Provider, session goth.
 		return nil, err
 	}
 
-	linkedTransactionResponseBytes, err := provider.Create(session, "LinkedTransactions", additionalHeaders, body)
+	linkedTransactionResponseBytes, err := provider.Create(session, "LinkedTransactions", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

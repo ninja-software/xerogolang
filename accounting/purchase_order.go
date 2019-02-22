@@ -121,7 +121,7 @@ func unmarshalPurchaseOrder(purchaseOrderResponseBytes []byte) (*PurchaseOrders,
 }
 
 //Create will create purchaseOrders given an PurchaseOrders struct
-func (p *PurchaseOrders) Create(provider *xerogolang.Provider, session goth.Session) (*PurchaseOrders, error) {
+func (p *PurchaseOrders) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*PurchaseOrders, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -132,7 +132,7 @@ func (p *PurchaseOrders) Create(provider *xerogolang.Provider, session goth.Sess
 		return nil, err
 	}
 
-	purchaseOrderResponseBytes, err := provider.Create(session, "PurchaseOrders", additionalHeaders, body)
+	purchaseOrderResponseBytes, err := provider.Create(session, "PurchaseOrders", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

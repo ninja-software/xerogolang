@@ -97,7 +97,7 @@ func unmarshalReceipt(receiptResponseBytes []byte) (*Receipts, error) {
 }
 
 //Create will create receipts given an Receipts struct
-func (r *Receipts) Create(provider *xerogolang.Provider, session goth.Session) (*Receipts, error) {
+func (r *Receipts) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*Receipts, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -108,7 +108,7 @@ func (r *Receipts) Create(provider *xerogolang.Provider, session goth.Session) (
 		return nil, err
 	}
 
-	receiptResponseBytes, err := provider.Create(session, "Receipts", additionalHeaders, body)
+	receiptResponseBytes, err := provider.Create(session, "Receipts", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

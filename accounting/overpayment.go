@@ -143,7 +143,7 @@ func FindOverpayment(provider *xerogolang.Provider, session goth.Session, overpa
 
 //Allocate allocates an overpayment - to create an overpayment
 //use the bankTransactions endpoint.
-func (o *Overpayments) Allocate(provider *xerogolang.Provider, session goth.Session, allocations Allocations) (*Overpayments, error) {
+func (o *Overpayments) Allocate(provider *xerogolang.Provider, session goth.Session, allocations Allocations, querystringParameters map[string]string) (*Overpayments, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -154,7 +154,7 @@ func (o *Overpayments) Allocate(provider *xerogolang.Provider, session goth.Sess
 		return nil, err
 	}
 
-	overpaymentResponseBytes, err := provider.Create(session, "Overpayments/"+o.Overpayments[0].OverpaymentID+"/Allocations", additionalHeaders, body)
+	overpaymentResponseBytes, err := provider.Create(session, "Overpayments/"+o.Overpayments[0].OverpaymentID+"/Allocations", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

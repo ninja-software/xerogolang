@@ -106,7 +106,7 @@ func unmarshalItem(itemResponseBytes []byte) (*Items, error) {
 }
 
 //Create will create items given an Items struct
-func (i *Items) Create(provider *xerogolang.Provider, session goth.Session) (*Items, error) {
+func (i *Items) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*Items, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -117,7 +117,7 @@ func (i *Items) Create(provider *xerogolang.Provider, session goth.Session) (*It
 		return nil, err
 	}
 
-	itemResponseBytes, err := provider.Create(session, "Items", additionalHeaders, body)
+	itemResponseBytes, err := provider.Create(session, "Items", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

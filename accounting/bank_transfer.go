@@ -83,7 +83,7 @@ func unmarshalBankTransfer(bankTransferResponseBytes []byte) (*BankTransfers, er
 }
 
 //Create will create bankTransfers given a BankTransfers struct
-func (b *BankTransfers) Create(provider *xerogolang.Provider, session goth.Session) (*BankTransfers, error) {
+func (b *BankTransfers) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*BankTransfers, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -94,7 +94,7 @@ func (b *BankTransfers) Create(provider *xerogolang.Provider, session goth.Sessi
 		return nil, err
 	}
 
-	bankTransferResponseBytes, err := provider.Create(session, "BankTransfers", additionalHeaders, body)
+	bankTransferResponseBytes, err := provider.Create(session, "BankTransfers", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

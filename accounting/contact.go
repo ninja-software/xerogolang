@@ -162,7 +162,7 @@ func unmarshalContact(contactResponseBytes []byte) (*Contacts, error) {
 }
 
 //Create will create Contacts given an Contacts struct
-func (c *Contacts) Create(provider *xerogolang.Provider, session goth.Session) (*Contacts, error) {
+func (c *Contacts) Create(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*Contacts, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -173,7 +173,7 @@ func (c *Contacts) Create(provider *xerogolang.Provider, session goth.Session) (
 		return nil, err
 	}
 
-	contactResponseBytes, err := provider.Create(session, "Contacts", additionalHeaders, body)
+	contactResponseBytes, err := provider.Create(session, "Contacts", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}
