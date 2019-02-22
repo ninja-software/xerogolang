@@ -1,4 +1,4 @@
-module github.com/XeroAPI/xerogolang
+module github.com/ninjadojo/xerogolang
 
 require (
 	github.com/gorilla/mux v1.6.2
