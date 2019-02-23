@@ -124,7 +124,7 @@ func (a *Accounts) Create(provider *xerogolang.Provider, session goth.Session, q
 
 //Update will update an account given an Accounts struct
 //This will only handle single account - you cannot update multiple accounts in a single call
-func (a *Accounts) Update(provider *xerogolang.Provider, session goth.Session) (*Accounts, error) {
+func (a *Accounts) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*Accounts, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -135,7 +135,7 @@ func (a *Accounts) Update(provider *xerogolang.Provider, session goth.Session) (
 		return nil, err
 	}
 
-	accountResponseBytes, err := provider.Update(session, "Accounts/"+a.Accounts[0].AccountID, additionalHeaders, body)
+	accountResponseBytes, err := provider.Update(session, "Accounts/"+a.Accounts[0].AccountID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

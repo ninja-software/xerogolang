@@ -166,7 +166,7 @@ func (i *Invoices) Create(provider *xerogolang.Provider, session goth.Session, q
 
 //Update will update an invoice given an Invoices struct
 //This will only handle single invoice - you cannot update multiple invoices in a single call
-func (i *Invoices) Update(provider *xerogolang.Provider, session goth.Session) (*Invoices, error) {
+func (i *Invoices) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*Invoices, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -177,7 +177,7 @@ func (i *Invoices) Update(provider *xerogolang.Provider, session goth.Session) (
 		return nil, err
 	}
 
-	invoiceResponseBytes, err := provider.Update(session, "Invoices/"+i.Invoices[0].InvoiceID, additionalHeaders, body)
+	invoiceResponseBytes, err := provider.Update(session, "Invoices/"+i.Invoices[0].InvoiceID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

@@ -127,7 +127,7 @@ func (i *Items) Create(provider *xerogolang.Provider, session goth.Session, quer
 
 //Update will update an item given an Items struct
 //This will only handle single item - you cannot update multiple items in a single call
-func (i *Items) Update(provider *xerogolang.Provider, session goth.Session) (*Items, error) {
+func (i *Items) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*Items, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -138,7 +138,7 @@ func (i *Items) Update(provider *xerogolang.Provider, session goth.Session) (*It
 		return nil, err
 	}
 
-	itemResponseBytes, err := provider.Update(session, "Items/"+i.Items[0].ItemID, additionalHeaders, body)
+	itemResponseBytes, err := provider.Update(session, "Items/"+i.Items[0].ItemID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

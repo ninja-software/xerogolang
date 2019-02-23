@@ -142,7 +142,7 @@ func (p *PurchaseOrders) Create(provider *xerogolang.Provider, session goth.Sess
 
 //Update will update an purchaseOrder given an PurchaseOrders struct
 //This will only handle single purchaseOrder - you cannot update multiple purchaseOrders in a single call
-func (p *PurchaseOrders) Update(provider *xerogolang.Provider, session goth.Session) (*PurchaseOrders, error) {
+func (p *PurchaseOrders) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*PurchaseOrders, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -153,7 +153,7 @@ func (p *PurchaseOrders) Update(provider *xerogolang.Provider, session goth.Sess
 		return nil, err
 	}
 
-	purchaseOrderResponseBytes, err := provider.Update(session, "PurchaseOrders/"+p.PurchaseOrders[0].PurchaseOrderID, additionalHeaders, body)
+	purchaseOrderResponseBytes, err := provider.Update(session, "PurchaseOrders/"+p.PurchaseOrders[0].PurchaseOrderID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

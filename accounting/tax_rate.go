@@ -84,7 +84,7 @@ func (t *TaxRates) Create(provider *xerogolang.Provider, session goth.Session, q
 
 //Update will update an taxRate given an TaxRates struct
 //This will only handle a single taxRate - you cannot update multiple taxRates in a single call
-func (t *TaxRates) Update(provider *xerogolang.Provider, session goth.Session) (*TaxRates, error) {
+func (t *TaxRates) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*TaxRates, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -95,7 +95,7 @@ func (t *TaxRates) Update(provider *xerogolang.Provider, session goth.Session) (
 		return nil, err
 	}
 
-	taxRateResponseBytes, err := provider.Update(session, "TaxRates", additionalHeaders, body)
+	taxRateResponseBytes, err := provider.Update(session, "TaxRates", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

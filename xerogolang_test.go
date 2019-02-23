@@ -183,6 +183,7 @@ func Test_Update(t *testing.T) {
 			"Accept":       "application/json",
 			"Content-Type": "application/xml",
 		}
+		querystringParameters := map[string]string{}
 
 		test := Test{
 			Name: "Location",
@@ -199,7 +200,7 @@ func Test_Update(t *testing.T) {
 			a.Error(err, nil)
 		}
 
-		response, err := provider.Update(&session, "TrackingCategories/111-111", additionalHeaders, body)
+		response, err := provider.Update(&session, "TrackingCategories/111-111", additionalHeaders, body, querystringParameters)
 		if err != nil {
 			a.Error(err, nil)
 		}
