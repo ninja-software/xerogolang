@@ -111,7 +111,7 @@ func (p *Payments) Create(provider *xerogolang.Provider, session goth.Session, q
 //Update will update an payment given an Payments struct
 //This will only handle single payment - you cannot update multiple payments in a single call
 //Payments cannot be modified, only created and deleted.
-func (p *Payments) Update(provider *xerogolang.Provider, session goth.Session) (*Payments, error) {
+func (p *Payments) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*Payments, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -127,7 +127,7 @@ func (p *Payments) Update(provider *xerogolang.Provider, session goth.Session) (
 		return nil, err
 	}
 
-	paymentResponseBytes, err := provider.Update(session, "Payments/"+p.Payments[0].PaymentID, additionalHeaders, body)
+	paymentResponseBytes, err := provider.Update(session, "Payments/"+p.Payments[0].PaymentID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

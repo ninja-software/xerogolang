@@ -136,7 +136,7 @@ func (c *CreditNotes) Create(provider *xerogolang.Provider, session goth.Session
 
 //Update will update an creditNote given an CreditNotes struct
 //This will only handle single creditNote - you cannot update multiple creditNotes in a single call
-func (c *CreditNotes) Update(provider *xerogolang.Provider, session goth.Session) (*CreditNotes, error) {
+func (c *CreditNotes) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*CreditNotes, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -147,7 +147,7 @@ func (c *CreditNotes) Update(provider *xerogolang.Provider, session goth.Session
 		return nil, err
 	}
 
-	creditNoteResponseBytes, err := provider.Update(session, "CreditNotes/"+c.CreditNotes[0].CreditNoteID, additionalHeaders, body)
+	creditNoteResponseBytes, err := provider.Update(session, "CreditNotes/"+c.CreditNotes[0].CreditNoteID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

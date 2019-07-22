@@ -183,7 +183,7 @@ func (c *Contacts) Create(provider *xerogolang.Provider, session goth.Session, q
 
 //Update will update a Contact given a Contacts struct
 //This will only handle single Contact - you cannot update multiple Contacts in a single call
-func (c *Contacts) Update(provider *xerogolang.Provider, session goth.Session) (*Contacts, error) {
+func (c *Contacts) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*Contacts, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -194,7 +194,7 @@ func (c *Contacts) Update(provider *xerogolang.Provider, session goth.Session) (
 		return nil, err
 	}
 
-	contactResponseBytes, err := provider.Update(session, "Contacts/"+c.Contacts[0].ContactID, additionalHeaders, body)
+	contactResponseBytes, err := provider.Update(session, "Contacts/"+c.Contacts[0].ContactID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +245,7 @@ func FindContact(provider *xerogolang.Provider, session goth.Session, contactID 
 }
 
 //AddToContactGroup will add a collection of Contacts to a supplied contactGroupID
-func (c *Contacts) AddToContactGroup(provider *xerogolang.Provider, session goth.Session, contactGroupID string) (*Contacts, error) {
+func (c *Contacts) AddToContactGroup(provider *xerogolang.Provider, session goth.Session, contactGroupID string, querystringParameters map[string]string) (*Contacts, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -265,7 +265,7 @@ func (c *Contacts) AddToContactGroup(provider *xerogolang.Provider, session goth
 		return nil, err
 	}
 
-	contactResponseBytes, err := provider.Update(session, "ContactGroups/"+contactGroupID+"/Contacts", additionalHeaders, body)
+	contactResponseBytes, err := provider.Update(session, "ContactGroups/"+contactGroupID+"/Contacts", additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

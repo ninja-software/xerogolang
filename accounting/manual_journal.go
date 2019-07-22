@@ -104,7 +104,7 @@ func (m *ManualJournals) Create(provider *xerogolang.Provider, session goth.Sess
 
 //Update will update an manualJournal given an ManualJournals struct
 //This will only handle single manualJournal - you cannot update multiple manualJournals in a single call
-func (m *ManualJournals) Update(provider *xerogolang.Provider, session goth.Session) (*ManualJournals, error) {
+func (m *ManualJournals) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*ManualJournals, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -115,7 +115,7 @@ func (m *ManualJournals) Update(provider *xerogolang.Provider, session goth.Sess
 		return nil, err
 	}
 
-	manualJournalResponseBytes, err := provider.Update(session, "ManualJournals/"+m.ManualJournals[0].ManualJournalID, additionalHeaders, body)
+	manualJournalResponseBytes, err := provider.Update(session, "ManualJournals/"+m.ManualJournals[0].ManualJournalID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

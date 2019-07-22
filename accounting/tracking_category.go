@@ -61,7 +61,7 @@ func (t *TrackingCategories) Create(provider *xerogolang.Provider, session goth.
 
 //Update will update an trackingCategory given an TrackingCategories struct
 //This will only handle single trackingCategory - you cannot update multiple trackingCategories in a single call
-func (t *TrackingCategories) Update(provider *xerogolang.Provider, session goth.Session) (*TrackingCategories, error) {
+func (t *TrackingCategories) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*TrackingCategories, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -72,7 +72,7 @@ func (t *TrackingCategories) Update(provider *xerogolang.Provider, session goth.
 		return nil, err
 	}
 
-	trackingCategoryResponseBytes, err := provider.Update(session, "TrackingCategories/"+t.TrackingCategories[0].TrackingCategoryID, additionalHeaders, body)
+	trackingCategoryResponseBytes, err := provider.Update(session, "TrackingCategories/"+t.TrackingCategories[0].TrackingCategoryID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

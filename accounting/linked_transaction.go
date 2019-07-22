@@ -102,7 +102,7 @@ func (l *LinkedTransactions) Create(provider *xerogolang.Provider, session goth.
 //Update will update an LinkedTransaction given an LinkedTransactions struct
 //This will only handle single LinkedTransaction - you cannot update multiple LinkedTransactions in a single call
 //LinkedTransactions cannot be modified, only created and deleted.
-func (l *LinkedTransactions) Update(provider *xerogolang.Provider, session goth.Session) (*LinkedTransactions, error) {
+func (l *LinkedTransactions) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*LinkedTransactions, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -113,7 +113,7 @@ func (l *LinkedTransactions) Update(provider *xerogolang.Provider, session goth.
 		return nil, err
 	}
 
-	LinkedTransactionResponseBytes, err := provider.Update(session, "LinkedTransactions/"+l.LinkedTransactions[0].LinkedTransactionID, additionalHeaders, body)
+	LinkedTransactionResponseBytes, err := provider.Update(session, "LinkedTransactions/"+l.LinkedTransactions[0].LinkedTransactionID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

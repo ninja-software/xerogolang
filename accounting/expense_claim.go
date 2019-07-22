@@ -105,7 +105,7 @@ func (e *ExpenseClaims) Create(provider *xerogolang.Provider, session goth.Sessi
 
 //Update will update an expenseClaim given an ExpenseClaims struct
 //This will only handle single expenseClaim - you cannot update multiple expenseClaims in a single call
-func (e *ExpenseClaims) Update(provider *xerogolang.Provider, session goth.Session) (*ExpenseClaims, error) {
+func (e *ExpenseClaims) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*ExpenseClaims, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -122,7 +122,7 @@ func (e *ExpenseClaims) Update(provider *xerogolang.Provider, session goth.Sessi
 		return nil, err
 	}
 
-	expenseClaimResponseBytes, err := provider.Update(session, "ExpenseClaims/"+e.ExpenseClaims[0].ExpenseClaimID, additionalHeaders, body)
+	expenseClaimResponseBytes, err := provider.Update(session, "ExpenseClaims/"+e.ExpenseClaims[0].ExpenseClaimID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

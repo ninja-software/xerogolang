@@ -130,7 +130,7 @@ func (b *BankTransactions) Create(provider *xerogolang.Provider, session goth.Se
 
 //Update will update a BankTransaction given a BankTransactions struct
 //This will only handle single BankTransaction - you cannot update multiple BankTransactions in a single call
-func (b *BankTransactions) Update(provider *xerogolang.Provider, session goth.Session) (*BankTransactions, error) {
+func (b *BankTransactions) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*BankTransactions, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -141,7 +141,7 @@ func (b *BankTransactions) Update(provider *xerogolang.Provider, session goth.Se
 		return nil, err
 	}
 
-	bankTransactionResponseBytes, err := provider.Update(session, "BankTransactions/"+b.BankTransactions[0].BankTransactionID, additionalHeaders, body)
+	bankTransactionResponseBytes, err := provider.Update(session, "BankTransactions/"+b.BankTransactions[0].BankTransactionID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

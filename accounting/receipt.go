@@ -118,7 +118,7 @@ func (r *Receipts) Create(provider *xerogolang.Provider, session goth.Session, q
 
 //Update will update an receipt given an Receipts struct
 //This will only handle single receipt - you cannot update multiple receipts in a single call
-func (r *Receipts) Update(provider *xerogolang.Provider, session goth.Session) (*Receipts, error) {
+func (r *Receipts) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*Receipts, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -140,7 +140,7 @@ func (r *Receipts) Update(provider *xerogolang.Provider, session goth.Session) (
 		return nil, err
 	}
 
-	receiptResponseBytes, err := provider.Update(session, "Receipts/"+r.Receipts[0].ReceiptID, additionalHeaders, body)
+	receiptResponseBytes, err := provider.Update(session, "Receipts/"+r.Receipts[0].ReceiptID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

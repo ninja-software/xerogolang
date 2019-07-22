@@ -50,7 +50,7 @@ func (o *Options) Add(provider *xerogolang.Provider, session goth.Session, query
 }
 
 //Update will update a given tracking option
-func (t *TrackingOption) Update(provider *xerogolang.Provider, session goth.Session) (*TrackingCategories, error) {
+func (t *TrackingOption) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*TrackingCategories, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -61,7 +61,7 @@ func (t *TrackingOption) Update(provider *xerogolang.Provider, session goth.Sess
 		return nil, err
 	}
 
-	trackingCategoryResponseBytes, err := provider.Update(session, "TrackingCategories/"+t.TrackingCategoryID+"/Options/"+t.TrackingOptionID, additionalHeaders, body)
+	trackingCategoryResponseBytes, err := provider.Update(session, "TrackingCategories/"+t.TrackingCategoryID+"/Options/"+t.TrackingOptionID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}

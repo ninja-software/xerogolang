@@ -61,7 +61,7 @@ func (c *ContactGroups) Create(provider *xerogolang.Provider, session goth.Sessi
 
 //Update will update an contactGroup given an ContactGroups struct
 //This will only handle single contactGroup - you cannot update multiple contactGroups in a single call
-func (c *ContactGroups) Update(provider *xerogolang.Provider, session goth.Session) (*ContactGroups, error) {
+func (c *ContactGroups) Update(provider *xerogolang.Provider, session goth.Session, querystringParameters map[string]string) (*ContactGroups, error) {
 	additionalHeaders := map[string]string{
 		"Accept":       "application/json",
 		"Content-Type": "application/xml",
@@ -72,7 +72,7 @@ func (c *ContactGroups) Update(provider *xerogolang.Provider, session goth.Sessi
 		return nil, err
 	}
 
-	contactGroupResponseBytes, err := provider.Update(session, "ContactGroups/"+c.ContactGroups[0].ContactGroupID, additionalHeaders, body)
+	contactGroupResponseBytes, err := provider.Update(session, "ContactGroups/"+c.ContactGroups[0].ContactGroupID, additionalHeaders, body, querystringParameters)
 	if err != nil {
 		return nil, err
 	}
