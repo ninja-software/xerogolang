@@ -9,7 +9,7 @@ type LineItem struct {
 	Description string `json:"Description,omitempty" xml:"Description,omitempty"`
 
 	// LineItem Quantity
-	Quantity float64 `json:"Quantity,omitempty" xml:"Quantity,omitempty"`
+	Quantity float64 `json:"Quantity" xml:"Quantity"`
 
 	// LineItem Unit Amount
 	UnitAmount float64 `json:"UnitAmount,omitempty" xml:"UnitAmount,omitempty"`
