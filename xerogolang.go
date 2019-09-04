@@ -30,7 +30,7 @@ var (
 	tokenURL        = "https://api.xero.com/oauth/AccessToken"
 	endpointProfile = "https://api.xero.com/api.xro/2.0/"
 	//userAgentString should match the name of your Application
-	userAgentString = os.Getenv("XERO_USER_AGENT") + " (xerogolang 0.1.2) " + os.Getenv("XERO_KEY")
+	userAgentString = os.Getenv("XERO_USER_AGENT") + " (xerogolang 0.1.3) " + os.Getenv("XERO_KEY")
 	//privateKeyFilePath is a file path to your .pem private/public key file
 	//You only need this for private and partner Applications
 	//more details here: https://developer.xero.com/documentation/api-guides/create-publicprivate-key
@@ -134,6 +134,31 @@ func New(clientKey, secret, callbackURL string) *Provider {
 		//More details here: https://developer.xero.com/documentation/getting-started/api-application-types
 		Method:          os.Getenv("XERO_METHOD"),
 		PrivateKey:      helpers.ReadPrivateKeyFromPath(privateKeyFilePath),
+		UserAgentString: userAgentString,
+		providerName:    "xero",
+	}
+	return p
+}
+
+// NewNoEnviro creates a new Xero provider without using the environmental set variables
+// , and sets up important connection details.
+// You should always call `xero.New` to get a new Provider. Never try to create
+// one manually.
+func NewNoEnviro(clientKey, secret, callbackURL, userAgent, xeroMethod string, privateKey []byte) *Provider {
+	// Set variables without using the environment
+	userAgentString = userAgent + " (xerogolang 0.1.3) " + clientKey
+	privateKeyFilePath = ""
+
+	p := &Provider{
+		ClientKey:   clientKey,
+		Secret:      secret,
+		CallbackURL: callbackURL,
+		//Method determines how you will connect to Xero.
+		//Options are public, private, and partner
+		//Use public if this is your first time.
+		//More details here: https://developer.xero.com/documentation/getting-started/api-application-types
+		Method:          xeroMethod,
+		PrivateKey:      string(privateKey),
 		UserAgentString: userAgentString,
 		providerName:    "xero",
 	}
