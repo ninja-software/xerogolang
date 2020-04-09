@@ -6,6 +6,9 @@ require (
 	github.com/gorilla/sessions v1.1.1
 	github.com/markbates/goth v1.49.0
 	github.com/mrjones/oauth v0.0.0-20180629183705-f4e24b6d100c
-	github.com/stretchr/testify v1.2.2
+	github.com/ninja-software/xoauthlite v0.0.0-20200409052549-daa0bb429f17
+	github.com/stretchr/testify v1.5.1
 	golang.org/x/oauth2 v0.0.0-20181017192945-9dcd33a902f4
 )
+
+go 1.13

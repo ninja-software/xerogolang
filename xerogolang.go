@@ -21,6 +21,8 @@ import (
 	"github.com/XeroAPI/xerogolang/helpers"
 	"github.com/markbates/goth"
 	"github.com/mrjones/oauth"
+	"github.com/ninja-software/xoauthlite"
+	"github.com/ninja-software/xoauthlite/oidc"
 	"golang.org/x/oauth2"
 )
 
@@ -30,15 +32,26 @@ var (
 	tokenURL        = "https://api.xero.com/oauth/AccessToken"
 	endpointProfile = "https://api.xero.com/api.xro/2.0/"
 	//userAgentString should match the name of your Application
-	userAgentString = os.Getenv("XERO_USER_AGENT") + " (xerogolang 0.1.3) " + os.Getenv("XERO_KEY")
+	userAgentString = os.Getenv("XERO_USER_AGENT") + " (xerogolang 0.2.0) " + os.Getenv("XERO_KEY")
 	//privateKeyFilePath is a file path to your .pem private/public key file
 	//You only need this for private and partner Applications
 	//more details here: https://developer.xero.com/documentation/api-guides/create-publicprivate-key
 	privateKeyFilePath = os.Getenv("XERO_PRIVATE_KEY_PATH")
 )
 
+// AuthType supported oauth type
+type AuthType string
+
+// list of supported oauth type
+const (
+	AuthTypeOAuth1A AuthType = "oauth1a"
+	AuthTypeOAuth2  AuthType = "oauth2"
+)
+
 // Provider is the implementation of `goth.Provider` for accessing Xero.
 type Provider struct {
+	AuthType        AuthType
+	Scopes          []string
 	ClientKey       string
 	Secret          string
 	CallbackURL     string
@@ -48,7 +61,10 @@ type Provider struct {
 	PrivateKey      string
 	debug           bool
 	consumer        *oauth.Consumer
+	oauth2Client    *xoauthlite.OidcClient // holds config only
+	oauth2Session   *OAuth2Session
 	providerName    string
+	ready           bool
 }
 
 //newPublicConsumer creates a consumer capable of communicating with a Public application: https://developer.xero.com/documentation/auth-and-limits/public-applications
@@ -125,6 +141,7 @@ func (p *Provider) newPrivateOrPartnerConsumer(authURL string) *oauth.Consumer {
 // one manually.
 func New(clientKey, secret, callbackURL string) *Provider {
 	p := &Provider{
+		AuthType:    AuthTypeOAuth1A,
 		ClientKey:   clientKey,
 		Secret:      secret,
 		CallbackURL: callbackURL,
@@ -146,10 +163,11 @@ func New(clientKey, secret, callbackURL string) *Provider {
 // one manually.
 func NewNoEnviro(clientKey, secret, callbackURL, userAgent, xeroMethod string, privateKey []byte) *Provider {
 	// Set variables without using the environment
-	userAgentString = userAgent + " (xerogolang 0.1.3) " + clientKey
+	userAgentString = userAgent + " (xerogolang 0.2.0) " + clientKey
 	privateKeyFilePath = ""
 
 	p := &Provider{
+		AuthType:    AuthTypeOAuth1A,
 		ClientKey:   clientKey,
 		Secret:      secret,
 		CallbackURL: callbackURL,
@@ -165,7 +183,33 @@ func NewNoEnviro(clientKey, secret, callbackURL, userAgent, xeroMethod string, p
 	return p
 }
 
-// New creates a new Xero provider, with a custom http client
+// NewOAuth2 creates a new Xero provider using OAuth2, and sets up important connection details.
+// You should always call `xero.NewOAuth2` to get a new Provider. Never try to create
+// one manually.
+func NewOAuth2(clientKey, secret string, callbackURL *url.URL, xeroMethod string, scopes []string) *Provider {
+	p := &Provider{
+		AuthType:        AuthTypeOAuth2,
+		ClientKey:       clientKey,
+		Secret:          secret,
+		CallbackURL:     callbackURL.String(),
+		Method:          xeroMethod,
+		PrivateKey:      helpers.ReadPrivateKeyFromPath(privateKeyFilePath),
+		UserAgentString: userAgentString,
+		providerName:    "xero",
+		Scopes:          scopes,
+		consumer:        &oauth.Consumer{}, // non-nil to skip
+		oauth2Client: &xoauthlite.OidcClient{
+			Authority:    oidc.DefaultAuthority,
+			ClientID:     clientKey,
+			ClientSecret: secret,
+			Scopes:       oidc.DefaultScopes,
+			RedirectURL:  callbackURL,
+		},
+	}
+	return p
+}
+
+// NewCustomHTTPClient creates a new Xero provider, with a custom http client
 func NewCustomHTTPClient(clientKey, secret, callbackURL string, httpClient *http.Client) *Provider {
 	p := &Provider{
 		ClientKey:   clientKey,
@@ -204,6 +248,20 @@ func (p *Provider) Debug(debug bool) {
 // BeginAuth asks Xero for an authentication end-point and a request token for a session.
 // Xero does not support the "state" variable.
 func (p *Provider) BeginAuth(state string) (goth.Session, error) {
+	if p.AuthType == AuthTypeOAuth2 {
+		accessToken := &oauth.AccessToken{
+			Token:  p.ClientKey,
+			Secret: p.Secret,
+		}
+		privateSession := &Session{
+			AuthURL:            authorizeURL,
+			RequestToken:       nil,
+			AccessToken:        accessToken,
+			AccessTokenExpires: time.Now().UTC().Add(87600 * time.Hour),
+		}
+		return privateSession, nil
+	}
+
 	if p.consumer == nil {
 		p.initConsumer()
 	}
@@ -235,6 +293,11 @@ func (p *Provider) BeginAuth(state string) (goth.Session, error) {
 //processRequest processes a request prior to it being sent to the API
 func (p *Provider) processRequest(request *http.Request, session goth.Session, additionalHeaders map[string]string) ([]byte, error) {
 	sess := session.(*Session)
+
+	// pass to oauth2
+	if p.AuthType == AuthTypeOAuth2 {
+		return p.processRequestOAuth2(request, additionalHeaders)
+	}
 
 	if p.consumer == nil {
 		p.initConsumer()
@@ -284,6 +347,51 @@ func (p *Provider) processRequest(request *http.Request, session goth.Session, a
 	}
 	if responseBytes == nil {
 		return nil, fmt.Errorf("Received no response: %s", err.Error())
+	}
+	return responseBytes, nil
+}
+
+//processRequestOAuth2 processes a request prior to it being sent to the API for oauth2
+func (p *Provider) processRequestOAuth2(request *http.Request, additionalHeaders map[string]string) ([]byte, error) {
+	var err error
+
+	err = p.initOAuth2()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.oauth2Session == nil || p.oauth2Session.AccessToken == "" {
+		// data is not yet retrieved since accessToken is still empty
+		return nil, fmt.Errorf("%s cannot process request without accessToken", p.providerName)
+	}
+	request.Header.Add("Bearer ", p.oauth2Session.AccessToken)
+
+	request.Header.Add("User-Agent", p.UserAgentString)
+	for key, value := range additionalHeaders {
+		request.Header.Add(key, value)
+	}
+
+	client := &http.Client{}
+
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(
+			helpers.ReaderToString(response.Body),
+		)
+	}
+
+	responseBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("Could not read response: %w", err)
+	}
+	if responseBytes == nil {
+		return nil, fmt.Errorf("Received nil response")
 	}
 	return responseBytes, nil
 }
@@ -358,6 +466,40 @@ func (p *Provider) Remove(session goth.Session, endpoint string, additionalHeade
 	}
 
 	return p.processRequest(request, session, additionalHeaders)
+}
+
+// TenantConnection is the singular schema of endpoint response of xero api /connections
+type TenantConnection struct {
+	ID             string `json:"id"`
+	TenantID       string `json:"tenantId"`
+	TenantType     string `json:"tenantType"`
+	CreatedDateUTC string `json:"createdDateUtc"`
+	UpdatedDateUTC string `json:"updatedDateUtc"`
+}
+
+// TenantConnections is collection, expected response from endpoint xero api /connections
+type TenantConnections []*TenantConnection
+
+// Connections finds out tenant connections that session have access to
+func (p *Provider) Connections(session goth.Session, additionalHeaders map[string]string) ([]*TenantConnection, error) {
+	endpoint := "https://api.xero.com/connections"
+	request, err := http.NewRequest("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	responseBytes, err := p.processRequest(request, session, additionalHeaders)
+	if err != nil {
+		return nil, err
+	}
+
+	var tconnections TenantConnections
+	err = json.Unmarshal(responseBytes, &tconnections)
+	if err != nil {
+		return nil, fmt.Errorf("Could not unmarshal response: %w", err)
+	}
+
+	return tconnections, nil
 }
 
 //Organisation is the expected response from the Organisation endpoint - this is not a complete schema
@@ -483,4 +625,17 @@ func (p *Provider) initConsumer() {
 	default:
 		p.consumer = p.newPublicConsumer(authorizeURL)
 	}
+}
+
+func (p *Provider) initOAuth2() error {
+	var _, err = oidc.GetMetadata(oidc.DefaultAuthority)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Ready is the provider is authenticated and ready to process
+func (p *Provider) Ready() bool {
+	return p.ready
 }
