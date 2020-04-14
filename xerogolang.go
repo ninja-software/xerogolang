@@ -27,6 +27,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
+var Version = "0.1.0"
+
 var (
 	requestURL      = "https://api.xero.com/oauth/RequestToken"
 	authorizeURL    = "https://api.xero.com/oauth/Authorize"
