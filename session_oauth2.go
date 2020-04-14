@@ -14,6 +14,9 @@ import (
 	"github.com/ninja-software/xoauthlite/oidc"
 )
 
+// global because this is only way to handle it (for now. since channel blocks and context.WithValue doesnt mutate existing value)
+var gViewModel *xoauthlite.TokenResultViewModel
+
 // OAuth2Session stores data during the oauth2 process with Xero
 type OAuth2Session struct {
 	AuthURL            string
@@ -42,65 +45,8 @@ func (s *OAuth2Session) GetAuthURL() (string, error) {
 }
 
 // Authorize the session with Xero and return the access token to be stored for future use.
-func (s *OAuth2Session) Authorize(p *Provider, params goth.Params) error {
-	wellKnownConfig, err := oidc.GetMetadata(oidc.DefaultAuthority)
-	if err != nil {
-		return err
-	}
-
-	clientConfig := p.oauth2Client
-
-	// not used
-	codeChallenge := ""
-	codeVerifier := ""
-
-	// build browser link
-	state, stateErr := oidc.GenerateRandomStringURLSafe(24)
-	if stateErr != nil {
-		log.Fatal(stateErr)
-	}
-	authorisationURL, err := oidc.BuildCodeAuthorisationRequest(
-		*wellKnownConfig,
-		clientConfig.ClientID,
-		clientConfig.RedirectURL.String(),
-		clientConfig.Scopes,
-		state,
-		codeChallenge,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Open browser to", authorisationURL)
-
-	// setup http server
-	m := http.NewServeMux()
-	svr := http.Server{
-		Addr:    fmt.Sprintf(":%s", clientConfig.RedirectURL.Port()),
-		Handler: m,
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-
-	defer cancel()
-
-	// Open a web server to receive the redirect
-	m.HandleFunc("/callback", handlerOAuth2(p, clientConfig, wellKnownConfig, codeVerifier, state, cancel))
-
-	go func() {
-		if err := svr.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Println(err)
-		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		// Shutdown the server when the context is canceled
-		err := svr.Shutdown(ctx)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-
-	return nil
+func (s *OAuth2Session) Authorize(p goth.Provider, params goth.Params) (string, error) {
+	return gViewModel.AccessToken, nil
 }
 
 func handlerOAuth2(p *Provider, cc *xoauthlite.OidcClient, wellKnownConfig *oidc.WellKnownConfiguration, codeVerifier, state string, cancel context.CancelFunc) http.HandlerFunc {
@@ -163,4 +109,31 @@ func (s *OAuth2Session) Marshal() string {
 
 func (s *OAuth2Session) String() string {
 	return s.Marshal()
+}
+
+// user click xero web url callback handler
+func handler(cc *xoauthlite.OidcClient, wellKnownConfig *oidc.WellKnownConfiguration, codeVerifier, state string, cancel context.CancelFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		var authorisationResponse, err = oidc.ValidateAuthorisationResponse(r.URL, state)
+		if err != nil {
+			log.Println(err)
+			cancel()
+			return
+		}
+
+		gViewModel, err = xoauthlite.VerifyCode(cc.ClientID, cc.ClientSecret, cc.RedirectURL.String(), *wellKnownConfig, codeVerifier, authorisationResponse.Code)
+		if err != nil {
+			log.Println(err)
+			cancel()
+			return
+		}
+
+		w.Write([]byte("{\"status\": \"success\"}"))
+		cancel()
+	}
 }

@@ -2,6 +2,7 @@ package xerogolang
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -51,6 +52,7 @@ const (
 // Provider is the implementation of `goth.Provider` for accessing Xero.
 type Provider struct {
 	AuthType        AuthType
+	TenantID        string // pick which tenant for oauth2 to interact with
 	Scopes          []string
 	ClientKey       string
 	Secret          string
@@ -186,22 +188,23 @@ func NewNoEnviro(clientKey, secret, callbackURL, userAgent, xeroMethod string, p
 // NewOAuth2 creates a new Xero provider using OAuth2, and sets up important connection details.
 // You should always call `xero.NewOAuth2` to get a new Provider. Never try to create
 // one manually.
-func NewOAuth2(clientKey, secret string, callbackURL *url.URL, xeroMethod string, scopes []string) *Provider {
+func NewOAuth2(clientID, clientSecret string, callbackURL *url.URL, xeroMethod string, scopes []string, tenantID string) *Provider {
 	p := &Provider{
 		AuthType:        AuthTypeOAuth2,
-		ClientKey:       clientKey,
-		Secret:          secret,
+		TenantID:        tenantID,
+		ClientKey:       clientID,
+		Secret:          clientSecret,
 		CallbackURL:     callbackURL.String(),
 		Method:          xeroMethod,
-		PrivateKey:      helpers.ReadPrivateKeyFromPath(privateKeyFilePath),
+		PrivateKey:      "",
 		UserAgentString: userAgentString,
 		providerName:    "xero",
 		Scopes:          scopes,
 		consumer:        &oauth.Consumer{}, // non-nil to skip
 		oauth2Client: &xoauthlite.OidcClient{
 			Authority:    oidc.DefaultAuthority,
-			ClientID:     clientKey,
-			ClientSecret: secret,
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
 			Scopes:       oidc.DefaultScopes,
 			RedirectURL:  callbackURL,
 		},
@@ -249,17 +252,7 @@ func (p *Provider) Debug(debug bool) {
 // Xero does not support the "state" variable.
 func (p *Provider) BeginAuth(state string) (goth.Session, error) {
 	if p.AuthType == AuthTypeOAuth2 {
-		accessToken := &oauth.AccessToken{
-			Token:  p.ClientKey,
-			Secret: p.Secret,
-		}
-		privateSession := &Session{
-			AuthURL:            authorizeURL,
-			RequestToken:       nil,
-			AccessToken:        accessToken,
-			AccessTokenExpires: time.Now().UTC().Add(87600 * time.Hour),
-		}
-		return privateSession, nil
+		return p.BeginOAuth2(state)
 	}
 
 	if p.consumer == nil {
@@ -290,14 +283,121 @@ func (p *Provider) BeginAuth(state string) (goth.Session, error) {
 	return session, nil
 }
 
+// BeginOAuth2 asks Xero for an authentication end-point and a request token for a session.
+// Xero does not support the "state" variable.
+func (p *Provider) BeginOAuth2(stateX string) (goth.Session, error) {
+	u, err := url.Parse(p.CallbackURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.ClientKey == "" {
+		return nil, fmt.Errorf("empty client id")
+	}
+	if p.Secret == "" {
+		return nil, fmt.Errorf("empty client secret")
+	}
+
+	clientConfig := &xoauthlite.OidcClient{
+		Authority:    oidc.DefaultAuthority,
+		ClientID:     p.ClientKey,
+		ClientSecret: p.Secret,
+		Scopes:       p.Scopes,
+		RedirectURL:  u,
+	}
+
+	var wellKnownConfig, wellKnownErr = oidc.GetMetadata(clientConfig.Authority)
+	if wellKnownErr != nil {
+		return nil, wellKnownErr
+	}
+
+	// not used
+	codeChallenge := ""
+	codeVerifier := ""
+
+	// build browser link
+	state, stateErr := oidc.GenerateRandomStringURLSafe(24)
+	if stateErr != nil {
+		return nil, stateErr
+	}
+	authorisationURL, err := oidc.BuildCodeAuthorisationRequest(
+		*wellKnownConfig,
+		clientConfig.ClientID,
+		clientConfig.RedirectURL.String(),
+		clientConfig.Scopes,
+		state,
+		codeChallenge,
+	)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("Open browser to", authorisationURL)
+
+	// setup http server
+	m := http.NewServeMux()
+	s := http.Server{
+		Addr:    fmt.Sprintf(":%s", u.Port()),
+		Handler: m,
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+
+	defer cancel()
+
+	// Open a web server to receive the redirect
+	m.HandleFunc("/callback", handler(clientConfig, wellKnownConfig, codeVerifier, state, cancel))
+
+	go func() {
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Println(err)
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		// Shutdown the server when the context is canceled
+		err := s.Shutdown(ctx)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	// // debug
+	// // prepare to print to screen
+	// viewModel := *gViewModel
+	// viewModel.Claims = nil
+	// jsonData, err := json.MarshalIndent(viewModel, "", "    ")
+	// if err != nil {
+	// 	log.Println("failed to parse to json format")
+	// 	cancel()
+	// 	return nil, err
+	// }
+	// log.Debug(string(jsonData))
+
+	now := time.Now()
+	session := &OAuth2Session{
+		AuthURL:            wellKnownConfig.AuthorisationEndpoint,
+		AccessToken:        gViewModel.AccessToken,
+		AccessTokenExpires: now.Add(time.Second * 1800),
+		RefreshToken: &OAuth2RefreshToken{
+			String:    gViewModel.RefreshToken,
+			CreatedAt: now,
+		},
+		IdentityToken: gViewModel.IDToken,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+
+	return session, nil
+}
+
 //processRequest processes a request prior to it being sent to the API
 func (p *Provider) processRequest(request *http.Request, session goth.Session, additionalHeaders map[string]string) ([]byte, error) {
-	sess := session.(*Session)
-
-	// pass to oauth2
 	if p.AuthType == AuthTypeOAuth2 {
-		return p.processRequestOAuth2(request, additionalHeaders)
+		sessOA2 := session.(*OAuth2Session)
+		return p.processRequestOAuth2(request, sessOA2, additionalHeaders)
 	}
+
+	sess := session.(*Session)
 
 	if p.consumer == nil {
 		p.initConsumer()
@@ -352,7 +452,7 @@ func (p *Provider) processRequest(request *http.Request, session goth.Session, a
 }
 
 //processRequestOAuth2 processes a request prior to it being sent to the API for oauth2
-func (p *Provider) processRequestOAuth2(request *http.Request, additionalHeaders map[string]string) ([]byte, error) {
+func (p *Provider) processRequestOAuth2(request *http.Request, session *OAuth2Session, additionalHeaders map[string]string) ([]byte, error) {
 	var err error
 
 	err = p.initOAuth2()
@@ -360,11 +460,10 @@ func (p *Provider) processRequestOAuth2(request *http.Request, additionalHeaders
 		return nil, err
 	}
 
-	if p.oauth2Session == nil || p.oauth2Session.AccessToken == "" {
-		// data is not yet retrieved since accessToken is still empty
-		return nil, fmt.Errorf("%s cannot process request without accessToken", p.providerName)
-	}
-	request.Header.Add("Bearer ", p.oauth2Session.AccessToken)
+	// TODO move away from global
+	request.Header.Add("Authorization", "Bearer "+gViewModel.AccessToken)
+	// TODO move away from provider? p.oauth2Session
+	request.Header.Add("Xero-tenant-id", p.TenantID)
 
 	request.Header.Add("User-Agent", p.UserAgentString)
 	for key, value := range additionalHeaders {
@@ -472,6 +571,7 @@ func (p *Provider) Remove(session goth.Session, endpoint string, additionalHeade
 type TenantConnection struct {
 	ID             string `json:"id"`
 	TenantID       string `json:"tenantId"`
+	TenantName     string `json:"tenantName"`
 	TenantType     string `json:"tenantType"`
 	CreatedDateUTC string `json:"createdDateUtc"`
 	UpdatedDateUTC string `json:"updatedDateUtc"`
