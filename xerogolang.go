@@ -27,7 +27,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
-var Version = "v0.1.1"
+// Version software release tag version
+var Version = "v0.1.2"
 
 var (
 	requestURL      = "https://api.xero.com/oauth/RequestToken"
