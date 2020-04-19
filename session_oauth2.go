@@ -30,10 +30,13 @@ type OAuth2Session struct {
 
 // OAuth2RefreshToken token to refresh AccessToken
 type OAuth2RefreshToken struct {
-	String    string
-	Used      bool
-	UsedAt    time.Time
-	CreatedAt time.Time
+	String           string    // token
+	Used             bool      // is token used
+	LastUsedAt       time.Time // last used time
+	CreatedAt        time.Time // new refresh token created time
+	RefresherTime    int       // how many second before token refresher
+	RefresherIsAlive bool      // auto token refresher alive?
+	Echo             bool      // echo events and messages for debug
 }
 
 // GetAuthURL will return the URL set by calling the `BeginAuth` function on the Xero provider.

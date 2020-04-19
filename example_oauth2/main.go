@@ -12,7 +12,7 @@ func main() {
 	clientID := os.Getenv("XERO_CLIENT_ID")
 	clientSecret := os.Getenv("XERO_CLIENT_SECRET")
 	tenantID := os.Getenv("XERO_TENANT_ID")
-	callbackURL := "http://localhost:8080/callback"
+	callbackURL := os.Getenv("XERO_REDIRECT_URL")
 	scopes := []string{
 		"openid",
 		"profile",
@@ -51,4 +51,10 @@ func main() {
 			break
 		}
 	}
+
+	client.Provider.SetOauth2TokenRefreshRate(300)
+	client.Provider.SetOauth2TokenRefreshEcho(true)
+
+	// prevent exiting
+	select {}
 }
