@@ -27,7 +27,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
-var Version = "v0.1.1"
+// Version software release tag version
+var Version = "v0.1.2"
 
 var (
 	requestURL      = "https://api.xero.com/oauth/RequestToken"
@@ -211,7 +212,83 @@ func NewOAuth2(clientID, clientSecret string, callbackURL *url.URL, xeroMethod s
 			RedirectURL:  callbackURL,
 		},
 	}
+
+	// start automatic token refresher
+	go StartAutoOauth2TokenRefresh(p)
+
 	return p
+}
+
+// StartAutoOauth2TokenRefresh start automatic token refresher
+func StartAutoOauth2TokenRefresh(p *Provider) error {
+	firstLoop := true
+	lastTickSpeed := 60 * 25 // default to 25 min
+	var err error
+
+	for {
+		time.Sleep(time.Second * time.Duration(lastTickSpeed))
+		// sanity check
+		if p.oauth2Session == nil {
+			continue
+		}
+		// prevent starting more than 1 refresher
+		// wont stop if there is multiple started at same similar time, but this will do
+		if firstLoop && p.oauth2Session.RefreshToken.RefresherIsAlive {
+			err = ErrRefresherIsAlive
+			break
+		}
+
+		rt := p.oauth2Session.RefreshToken
+
+		// change ticker speed, minimum of 5 min
+		if lastTickSpeed != rt.RefresherTime && rt.RefresherTime > 60*5 {
+			lastTickSpeed = rt.RefresherTime
+		}
+
+		rt.RefresherIsAlive = true
+		firstLoop = false
+
+		err = p.RefreshOAuth2Token()
+		if err != nil {
+			rt.RefresherIsAlive = false
+			break
+		}
+	}
+
+	return err
+}
+
+// GetOauth2TokenRefreshRate get the token refresh rate
+func (p *Provider) GetOauth2TokenRefreshRate() int {
+	return p.oauth2Session.RefreshToken.RefresherTime
+}
+
+// SetOauth2TokenRefreshRate set the token refresh rate
+func (p *Provider) SetOauth2TokenRefreshRate(sec int) error {
+	if sec < 60*5 {
+		return fmt.Errorf("time cannot be less than 5 minutes")
+	}
+	if sec > 60*29 {
+		return fmt.Errorf("time cannot be higher than 29 minutes")
+	}
+	if p.oauth2Session == nil {
+		return ErrOauth2SessionIsNil
+	}
+
+	p.oauth2Session.RefreshToken.RefresherTime = sec
+
+	return nil
+}
+
+// SetOauth2TokenRefreshEcho set the token refresh echo or not
+func (p *Provider) SetOauth2TokenRefreshEcho(echo bool) error {
+	if p.oauth2Session == nil {
+		return ErrOauth2SessionIsNil
+	}
+
+	p.oauth2Session.RefreshToken.Echo = echo
+
+	return nil
 }
 
 // NewCustomHTTPClient creates a new Xero provider, with a custom http client
@@ -388,6 +465,9 @@ func (p *Provider) BeginOAuth2(stateX string) (goth.Session, error) {
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}
+
+	// save session in provider
+	p.oauth2Session = session
 
 	return session, nil
 }
@@ -674,6 +754,60 @@ func (p *Provider) RefreshOAuth1Token(session *Session) error {
 	}
 	session.AccessToken = newAccessToken
 	session.AccessTokenExpires = time.Now().UTC().Add(30 * time.Minute)
+	return nil
+}
+
+// holds error
+var (
+	ErrRefreshTokenUsed   = errors.New("refresh token already used")
+	ErrRefresherIsAlive   = errors.New("existing auto token refresher is running")
+	ErrOauth2SessionIsNil = errors.New("oauth2 session is nil")
+)
+
+// RefreshOAuth2Token force refresh token
+func (p *Provider) RefreshOAuth2Token() error {
+	// not a oauth2 type
+	if p.AuthType != AuthTypeOAuth2 {
+		return nil
+	}
+	// make sure session exists
+	osess := p.oauth2Session
+	if osess == nil {
+		return ErrOauth2SessionIsNil
+	}
+
+	if osess.RefreshToken.Used {
+		return ErrRefreshTokenUsed
+	}
+
+	clientID := p.oauth2Client.ClientID
+	clientSecret := p.oauth2Client.ClientSecret
+	refreshToken := osess.RefreshToken.String
+	now := time.Now()
+
+	refreshResult, err := oidc.RefreshToken(
+		oidc.DefaultAuthority,
+		clientID,
+		clientSecret,
+		refreshToken,
+	)
+	if err != nil {
+		log.Println("failed to refresh token", err)
+		osess.RefreshToken.Used = true
+		osess.RefreshToken.LastUsedAt = now
+		return nil
+	}
+
+	// update refresh token
+	osess.RefreshToken.String = refreshResult.RefreshToken
+	osess.RefreshToken.Used = false
+	osess.RefreshToken.LastUsedAt = now
+	osess.RefreshToken.CreatedAt = now
+
+	if osess.RefreshToken.Echo {
+		log.Println("xero oauth2 token refreshed")
+	}
+
 	return nil
 }
 
