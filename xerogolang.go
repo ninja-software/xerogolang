@@ -258,6 +258,26 @@ func StartAutoOauth2TokenRefresh(p *Provider) error {
 	return err
 }
 
+// SetOauth2Session set oauth2 session in instance
+func (p *Provider) SetOauth2Session(wellKnownConfig *oidc.WellKnownConfiguration, gViewModel *xoauthlite.TokenResultViewModel) *OAuth2Session {
+	now := time.Now()
+	oAuth2Session := &OAuth2Session{
+		AuthURL:            wellKnownConfig.AuthorisationEndpoint,
+		AccessToken:        gViewModel.AccessToken,
+		AccessTokenExpires: now.Add(time.Second * 1800),
+		RefreshToken: &OAuth2RefreshToken{
+			String:    gViewModel.RefreshToken,
+			CreatedAt: now,
+		},
+		IdentityToken: gViewModel.IDToken,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	p.oauth2Session = oAuth2Session
+
+	return oAuth2Session
+}
+
 // GetOauth2TokenRefreshRate get the token refresh rate
 func (p *Provider) GetOauth2TokenRefreshRate() int {
 	return p.oauth2Session.RefreshToken.RefresherTime
@@ -452,21 +472,9 @@ func (p *Provider) BeginOAuth2(stateX string) (goth.Session, error) {
 	// }
 	// log.Debug(string(jsonData))
 
-	now := time.Now()
-	session := &OAuth2Session{
-		AuthURL:            wellKnownConfig.AuthorisationEndpoint,
-		AccessToken:        gViewModel.AccessToken,
-		AccessTokenExpires: now.Add(time.Second * 1800),
-		RefreshToken: &OAuth2RefreshToken{
-			String:    gViewModel.RefreshToken,
-			CreatedAt: now,
-		},
-		IdentityToken: gViewModel.IDToken,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
-
 	// save session in provider
+	session := p.SetOauth2Session(wellKnownConfig, gViewModel)
+
 	p.oauth2Session = session
 
 	return session, nil
