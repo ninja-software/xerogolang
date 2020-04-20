@@ -443,7 +443,7 @@ func (p *Provider) BeginOAuth2(stateX string) (goth.Session, error) {
 	defer cancel()
 
 	// Open a web server to receive the redirect
-	m.HandleFunc("/callback", handler(clientConfig, wellKnownConfig, codeVerifier, state, cancel))
+	m.HandleFunc("/callback", handler(clientConfig, wellKnownConfig, codeVerifier, state, p, cancel))
 
 	go func() {
 		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -460,24 +460,7 @@ func (p *Provider) BeginOAuth2(stateX string) (goth.Session, error) {
 		}
 	}
 
-	// // debug
-	// // prepare to print to screen
-	// viewModel := *gViewModel
-	// viewModel.Claims = nil
-	// jsonData, err := json.MarshalIndent(viewModel, "", "    ")
-	// if err != nil {
-	// 	log.Println("failed to parse to json format")
-	// 	cancel()
-	// 	return nil, err
-	// }
-	// log.Debug(string(jsonData))
-
-	// save session in provider
-	session := p.SetOauth2Session(wellKnownConfig, gViewModel)
-
-	p.oauth2Session = session
-
-	return session, nil
+	return p.oauth2Session, nil
 }
 
 //processRequest processes a request prior to it being sent to the API
@@ -550,10 +533,8 @@ func (p *Provider) processRequestOAuth2(request *http.Request, session *OAuth2Se
 		return nil, err
 	}
 
-	// TODO move away from global
-	request.Header.Add("Authorization", "Bearer "+gViewModel.AccessToken)
-	// TODO move away from provider? p.oauth2Session
-	request.Header.Add("Xero-tenant-id", p.TenantID)
+	request.Header.Add("Authorization", "Bearer "+session.AccessToken)
+	request.Header.Add("Xero-tenant-id", session.TenantID)
 
 	request.Header.Add("User-Agent", p.UserAgentString)
 	for key, value := range additionalHeaders {
