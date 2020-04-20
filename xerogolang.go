@@ -28,7 +28,7 @@ import (
 )
 
 // Version software release tag version
-var Version = "v0.1.2"
+var Version = "v0.1.3"
 
 var (
 	requestURL      = "https://api.xero.com/oauth/RequestToken"
