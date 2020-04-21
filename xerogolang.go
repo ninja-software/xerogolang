@@ -213,49 +213,58 @@ func NewOAuth2(clientID, clientSecret string, callbackURL *url.URL, xeroMethod s
 		},
 	}
 
-	// start automatic token refresher
-	go StartAutoOauth2TokenRefresh(p)
-
 	return p
 }
 
 // StartAutoOauth2TokenRefresh start automatic token refresher
-func StartAutoOauth2TokenRefresh(p *Provider) error {
-	firstLoop := true
-	lastTickSpeed := 60 * 25 // default to 25 min
-	var err error
+func (p *Provider) StartAutoOauth2TokenRefresh() {
+	// using primitive for loop with goroutine because there is no reliable way of changing ticker time
+	go func() {
+		firstLoop := true
 
-	for {
-		time.Sleep(time.Second * time.Duration(lastTickSpeed))
-		// sanity check
-		if p.oauth2Session == nil {
-			continue
+		for {
+			// wait enough so it wait time can be changed and also not eating cpu
+			time.Sleep(time.Second * 5)
+
+			// sanity check
+			if p.oauth2Session == nil {
+				continue
+			}
+
+			// shorthand
+			rt := p.oauth2Session.RefreshToken
+
+			// prevent starting more than 1 refresher
+			// wont stop if there is multiple started at short time, but this will do
+			if firstLoop && rt.RefresherIsAlive {
+				break
+			}
+
+			// not yet to refresh
+			tickSpeed := rt.RefresherTime
+			// fail safe, min 5 min
+			if tickSpeed < 300 {
+				tickSpeed = 300
+			}
+			if rt.CreatedAt.Add(time.Duration(tickSpeed) * time.Second).After(time.Now()) {
+				continue
+			}
+
+			rt.RefresherIsAlive = true
+			firstLoop = false
+
+			err := p.RefreshOAuth2Token()
+			if err != nil {
+				rt.RefresherIsAlive = false
+				break
+			}
 		}
-		// prevent starting more than 1 refresher
-		// wont stop if there is multiple started at same similar time, but this will do
-		if firstLoop && p.oauth2Session.RefreshToken.RefresherIsAlive {
-			err = ErrRefresherIsAlive
-			break
-		}
+	}()
+}
 
-		rt := p.oauth2Session.RefreshToken
-
-		// change ticker speed, minimum of 5 min
-		if lastTickSpeed != rt.RefresherTime && rt.RefresherTime > 60*5 {
-			lastTickSpeed = rt.RefresherTime
-		}
-
-		rt.RefresherIsAlive = true
-		firstLoop = false
-
-		err = p.RefreshOAuth2Token()
-		if err != nil {
-			rt.RefresherIsAlive = false
-			break
-		}
-	}
-
-	return err
+// Oauth2TokenRefresherIsAlive is it alive
+func (p *Provider) Oauth2TokenRefresherIsAlive() bool {
+	return p.oauth2Session.RefreshToken.RefresherIsAlive
 }
 
 // SetOauth2Session set oauth2 session in instance
