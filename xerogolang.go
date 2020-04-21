@@ -802,6 +802,10 @@ func (p *Provider) RefreshOAuth2Token() error {
 	osess.RefreshToken.LastUsedAt = now
 	osess.RefreshToken.CreatedAt = now
 
+	// update access token
+	osess.AccessToken = refreshResult.AccessToken
+	osess.AccessTokenExpires = time.Now().UTC().Add(30 * time.Minute)
+
 	if osess.RefreshToken.Echo {
 		log.Println("xero oauth2 token refreshed")
 	}
