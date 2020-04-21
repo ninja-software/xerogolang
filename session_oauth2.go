@@ -37,6 +37,7 @@ type OAuth2RefreshToken struct {
 }
 
 // GetAuthURL will return the URL set by calling the `BeginAuth` function on the Xero provider.
+// need this to be implemented so goth.Session works
 func (s *OAuth2Session) GetAuthURL() (string, error) {
 	if s.AuthURL == "" {
 		return "", errors.New(goth.NoAuthUrlErrorMessage)
@@ -45,6 +46,7 @@ func (s *OAuth2Session) GetAuthURL() (string, error) {
 }
 
 // Authorize the session with Xero and return the access token to be stored for future use.
+// need this to be implemented so goth.Session works
 func (s *OAuth2Session) Authorize(p goth.Provider, params goth.Params) (string, error) {
 	return s.AccessToken, nil
 }
@@ -79,6 +81,7 @@ func handlerOAuth2(p *Provider, cc *xoauthlite.OidcClient, wellKnownConfig *oidc
 }
 
 // Marshal the session into a string
+// need this to be implemented so goth.Session works
 func (s *OAuth2Session) Marshal() string {
 	b, _ := json.Marshal(s)
 	return string(b)

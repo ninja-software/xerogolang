@@ -216,6 +216,26 @@ func NewOAuth2(clientID, clientSecret string, callbackURL *url.URL, xeroMethod s
 	return p
 }
 
+// ResumeOauth2 resume previous oauth session by using previous tokens
+func (p *Provider) ResumeOauth2(authorisationEndpoint, refreshToken string) (*OAuth2Session, error) {
+	// setup session if not exist
+	if p.oauth2Session == nil {
+		p.oauth2Session = &OAuth2Session{}
+	}
+
+	p.oauth2Session.AuthURL = authorisationEndpoint
+	p.oauth2Session.RefreshToken = &OAuth2RefreshToken{
+		String: refreshToken,
+	}
+
+	err := p.RefreshOAuth2Token()
+	if err != nil {
+		return nil, err
+	}
+
+	return p.oauth2Session, nil
+}
+
 // StartAutoOauth2TokenRefresh start automatic token refresher
 func (p *Provider) StartAutoOauth2TokenRefresh() {
 	// using primitive for loop with goroutine because there is no reliable way of changing ticker time
@@ -795,6 +815,10 @@ func (p *Provider) RefreshOAuth2Token() error {
 		osess.RefreshToken.LastUsedAt = now
 		return nil
 	}
+
+	// note that access token changes each time it is refreshed, so store the update
+	osess.AccessToken = refreshResult.AccessToken
+	osess.AccessTokenExpires = time.Now().Add(time.Duration(refreshResult.ExpiresIn) * time.Second)
 
 	// update refresh token
 	osess.RefreshToken.String = refreshResult.RefreshToken
