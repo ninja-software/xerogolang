@@ -28,7 +28,7 @@ import (
 )
 
 // Version software release tag version
-var Version = "v0.1.5"
+var Version = "v0.1.6"
 
 var (
 	requestURL      = "https://api.xero.com/oauth/RequestToken"
@@ -825,6 +825,10 @@ func (p *Provider) RefreshOAuth2Token() error {
 	osess.RefreshToken.Used = false
 	osess.RefreshToken.LastUsedAt = now
 	osess.RefreshToken.CreatedAt = now
+
+	// update access token
+	osess.AccessToken = refreshResult.AccessToken
+	osess.AccessTokenExpires = time.Now().UTC().Add(30 * time.Minute)
 
 	if osess.RefreshToken.Echo {
 		log.Println("xero oauth2 token refreshed")
