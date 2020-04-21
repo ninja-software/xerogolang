@@ -28,7 +28,7 @@ import (
 )
 
 // Version software release tag version
-var Version = "v0.1.5"
+var Version = "v0.1.7"
 
 var (
 	requestURL      = "https://api.xero.com/oauth/RequestToken"
@@ -216,6 +216,24 @@ func NewOAuth2(clientID, clientSecret string, callbackURL *url.URL, xeroMethod s
 	return p
 }
 
+// ResumeOauth2 resume previous oauth session by using previous tokens
+func (p *Provider) ResumeOauth2(authorisationEndpoint, accessToken, refreshToken, tenantID string) (*OAuth2Session, error) {
+	// setup session if not exist
+	if p.oauth2Session == nil {
+		p.oauth2Session = &OAuth2Session{}
+	}
+
+	osess := p.oauth2Session
+	osess.AuthURL = authorisationEndpoint
+	osess.TenantID = tenantID
+	osess.AccessToken = accessToken
+	osess.RefreshToken = &OAuth2RefreshToken{
+		String: refreshToken,
+	}
+
+	return osess, nil
+}
+
 // StartAutoOauth2TokenRefresh start automatic token refresher
 func (p *Provider) StartAutoOauth2TokenRefresh() {
 	// using primitive for loop with goroutine because there is no reliable way of changing ticker time
@@ -253,7 +271,7 @@ func (p *Provider) StartAutoOauth2TokenRefresh() {
 			rt.RefresherIsAlive = true
 			firstLoop = false
 
-			err := p.RefreshOAuth2Token()
+			_, err := p.RefreshOAuth2Token()
 			if err != nil {
 				rt.RefresherIsAlive = false
 				break
@@ -268,17 +286,17 @@ func (p *Provider) Oauth2TokenRefresherIsAlive() bool {
 }
 
 // SetOauth2Session set oauth2 session in instance
-func (p *Provider) SetOauth2Session(wellKnownConfig *oidc.WellKnownConfiguration, gViewModel *xoauthlite.TokenResultViewModel) *OAuth2Session {
+func (p *Provider) SetOauth2Session(wellKnownConfig *oidc.WellKnownConfiguration, viewModel *xoauthlite.TokenResultViewModel) *OAuth2Session {
 	now := time.Now()
 	oAuth2Session := &OAuth2Session{
 		AuthURL:            wellKnownConfig.AuthorisationEndpoint,
-		AccessToken:        gViewModel.AccessToken,
+		AccessToken:        viewModel.AccessToken,
 		AccessTokenExpires: now.Add(time.Second * 1800),
 		RefreshToken: &OAuth2RefreshToken{
-			String:    gViewModel.RefreshToken,
+			String:    viewModel.RefreshToken,
 			CreatedAt: now,
 		},
-		IdentityToken: gViewModel.IDToken,
+		IdentityToken: viewModel.IDToken,
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}
@@ -757,25 +775,26 @@ func (p *Provider) RefreshOAuth1Token(session *Session) error {
 
 // holds error
 var (
+	ErrNotOauth2Type      = errors.New("not oauth2 type")
 	ErrRefreshTokenUsed   = errors.New("refresh token already used")
 	ErrRefresherIsAlive   = errors.New("existing auto token refresher is running")
 	ErrOauth2SessionIsNil = errors.New("oauth2 session is nil")
 )
 
 // RefreshOAuth2Token force refresh token
-func (p *Provider) RefreshOAuth2Token() error {
+func (p *Provider) RefreshOAuth2Token() (*OAuth2Session, error) {
 	// not a oauth2 type
 	if p.AuthType != AuthTypeOAuth2 {
-		return nil
+		return nil, ErrNotOauth2Type
 	}
 	// make sure session exists
 	osess := p.oauth2Session
 	if osess == nil {
-		return ErrOauth2SessionIsNil
+		return nil, ErrOauth2SessionIsNil
 	}
 
 	if osess.RefreshToken.Used {
-		return ErrRefreshTokenUsed
+		return osess, ErrRefreshTokenUsed
 	}
 
 	clientID := p.oauth2Client.ClientID
@@ -790,10 +809,9 @@ func (p *Provider) RefreshOAuth2Token() error {
 		refreshToken,
 	)
 	if err != nil {
-		log.Println("failed to refresh token", err)
 		osess.RefreshToken.Used = true
 		osess.RefreshToken.LastUsedAt = now
-		return nil
+		return osess, err
 	}
 
 	// update refresh token
@@ -802,11 +820,16 @@ func (p *Provider) RefreshOAuth2Token() error {
 	osess.RefreshToken.LastUsedAt = now
 	osess.RefreshToken.CreatedAt = now
 
+	// update access token
+	// note that access token changes each time it is refreshed, so store the update
+	osess.AccessToken = refreshResult.AccessToken
+	osess.AccessTokenExpires = time.Now().Add(time.Duration(refreshResult.ExpiresIn) * time.Second)
+
 	if osess.RefreshToken.Echo {
 		log.Println("xero oauth2 token refreshed")
 	}
 
-	return nil
+	return osess, nil
 }
 
 //RefreshToken refresh token is not provided by the Xero Public or Private Application -
