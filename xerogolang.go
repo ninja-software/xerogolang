@@ -235,7 +235,7 @@ func (p *Provider) ResumeOauth2(authorisationEndpoint, accessToken, refreshToken
 }
 
 // StartAutoOauth2TokenRefresh start automatic token refresher
-func (p *Provider) StartAutoOauth2TokenRefresh() {
+func (p *Provider) StartAutoOauth2TokenRefresh(clientReady *bool) {
 	// using primitive for loop with goroutine because there is no reliable way of changing ticker time
 	go func() {
 		firstLoop := true
@@ -275,6 +275,14 @@ func (p *Provider) StartAutoOauth2TokenRefresh() {
 			if err != nil {
 				rt.RefresherIsAlive = false
 				break
+			}
+
+			// When an xero api call returns a failure the xero client ready becomes false which prevents further calls
+			// to the API and presents an error in frontend etc. to prompt token refresh. There is potential to recover
+			// from this state. So if the token refresh is successful, then the API can be used again, so client ready
+			// state can go back to true.
+			if clientReady != nil {
+				*clientReady = true
 			}
 		}
 	}()
